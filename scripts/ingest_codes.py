@@ -39,10 +39,13 @@ def find_file(directory: Path, pattern: str) -> Path | None:
 def ingest_icd10cm(raw_dir: Path, store: CodeStore) -> int:
     """Find and ingest ICD-10-CM codes."""
     print("\n--- ICD-10-CM ---")
-    code_file = find_file(raw_dir / "icd10cm", "icd10cm_codes")
+    # Prefer order file (has header flags); fall back to codes file
+    code_file = find_file(raw_dir / "icd10cm", "icd10cm_order")
 
     if not code_file:
-        # Try alternative common filenames
+        code_file = find_file(raw_dir / "icd10cm", "icd10cm_codes")
+
+    if not code_file:
         code_file = find_file(raw_dir / "icd10cm", "codes")
 
     if not code_file:
@@ -167,7 +170,9 @@ def main() -> None:
     print(f"\nDatabase: {args.db_path.resolve()}")
     print("\nNext step: python scripts/build_vector_index.py")
 
-    store.close()
+    # DuckDB connections are closed automatically on garbage collection
+    # but we can explicitly delete if needed
+    del store
 
 
 if __name__ == "__main__":

@@ -25,7 +25,7 @@ CMS_SOURCES = {
     "icd10cm": {
         "url": "https://www.cms.gov/files/zip/2025-code-descriptions-tabular-order.zip",
         "description": "ICD-10-CM diagnosis codes and descriptions (FY2025)",
-        "extract_pattern": "icd10cm_codes_2025.txt",
+        "extract_pattern": "icd10cm_order_2025.txt",
     },
     "icd10pcs": {
         "url": "https://www.cms.gov/files/zip/2025-icd-10-pcs-codes-file.zip",

@@ -38,30 +38,67 @@ class CodeRecord:
 
 
 def parse_icd10cm(file_path: Path) -> list[CodeRecord]:
-    """Parse ICD-10-CM code file (tabular order format).
+    """Parse ICD-10-CM code file.
 
-    CMS format: fixed-width, each line has:
-    - Positions 0-4: order number (ignored)
-    - Position 5: blank
-    - Positions 6-12: code (no dot in file, e.g., 'R6520')
-    - Position 13: blank
-    - Position 14: header indicator (0=valid billable code, 1=header/category)
-    - Position 15: blank
-    - Positions 16+: short description
+    Handles TWO CMS formats:
+    1. Order file (icd10cm_order_*.txt): fixed-width
+       - Positions 0-4: order number (ignored)
+       - Position 5: blank
+       - Positions 6-12: code (no dot, e.g., 'R6520')
+       - Position 13: blank
+       - Position 14: header indicator (0=billable, 1=header/category)
+       - Position 15: blank
+       - Positions 16+: short description
+    2. Codes file (icd10cm_codes_*.txt): simple format
+       - Code at position 0 (3-7 chars, no dot)
+       - Whitespace separator
+       - Description
 
-    We format the code with a dot (R6520 -> R65.20) for readability.
+    Auto-detects by checking if positions 0-4 are numeric (order file).
+    Formats code with dot: R6520 -> R65.20 for readability.
     """
     records: list[CodeRecord] = []
 
     with open(file_path, encoding="utf-8", errors="replace") as f:
+        # Peek at first non-empty line to detect format
+        first_line = ""
+        for peek in f:
+            peek = peek.rstrip("\n")
+            if peek.strip():
+                first_line = peek
+                break
+
+        # Detect format: order file has 5-digit number at positions 0-4
+        is_order_format = (
+            len(first_line) >= 17
+            and first_line[:5].strip().isdigit()
+        )
+
+        # Reset to start
+        f.seek(0)
+
         for line in f:
             line = line.rstrip("\n")
-            if len(line) < 17:
-                continue
 
-            raw_code = line[6:13].strip()
-            is_header = line[14:15] == "1"
-            description = line[16:].strip()
+            if is_order_format:
+                # Order file: code at 6-12, header at 14, desc at 16+
+                # CMS convention: flag '0' = category/header (non-billable),
+                #                 flag '1' = valid billable code
+                if len(line) < 17:
+                    continue
+                raw_code = line[6:13].strip()
+                is_header = line[14:15] == "0"
+                description = line[16:].strip()
+            else:
+                # Codes file: code at start, then whitespace, then description
+                if len(line) < 5:
+                    continue
+                parts = line.split(None, 1)  # Split on first whitespace
+                if len(parts) < 2:
+                    continue
+                raw_code = parts[0].strip()
+                description = parts[1].strip()
+                is_header = False  # Codes file only contains billable codes
 
             if not raw_code:
                 continue
@@ -88,28 +125,52 @@ def parse_icd10cm(file_path: Path) -> list[CodeRecord]:
 def parse_icd10pcs(file_path: Path) -> list[CodeRecord]:
     """Parse ICD-10-PCS code file.
 
-    CMS format: fixed-width, each line has:
-    - Positions 0-4: order number (ignored)
-    - Position 5: blank
-    - Positions 6-12: 7-character PCS code (no dots)
-    - Position 13: blank
-    - Position 14: header indicator (0=valid, 1=header)
-    - Position 15: blank
-    - Positions 16+: short description
+    Handles TWO CMS formats:
+    1. Order file: fixed-width (order# at 0-4, code at 6-12, header at 14, desc at 16+)
+    2. Codes file: simple format (7-char code at position 0, space(s), description)
 
-    PCS codes are always 7 characters and have no dot.
+    Auto-detects by checking if positions 0-4 are numeric (order file) or
+    alphanumeric (codes file). PCS codes are always 7 characters, no dot.
     """
     records: list[CodeRecord] = []
 
     with open(file_path, encoding="utf-8", errors="replace") as f:
+        # Peek at first non-empty line to detect format
+        first_line = ""
+        for peek in f:
+            peek = peek.rstrip("\n")
+            if peek.strip():
+                first_line = peek
+                break
+
+        # Detect format: order file has 5-digit number at positions 0-4
+        is_order_format = (
+            len(first_line) >= 17
+            and first_line[:5].strip().isdigit()
+        )
+
+        # Reset to start
+        f.seek(0)
+
         for line in f:
             line = line.rstrip("\n")
-            if len(line) < 17:
-                continue
 
-            raw_code = line[6:13].strip()
-            is_header = line[14:15] == "1"
-            description = line[16:].strip()
+            if is_order_format:
+                # Order file: code at 6-12, header at 14, desc at 16+
+                # CMS convention: flag '0' = category/header (non-billable),
+                #                 flag '1' = valid billable code
+                if len(line) < 17:
+                    continue
+                raw_code = line[6:13].strip()
+                is_header = line[14:15] == "0"
+                description = line[16:].strip()
+            else:
+                # Codes file: 7-char code at position 0, then space(s), then description
+                if len(line) < 9:
+                    continue
+                raw_code = line[:7].strip()
+                description = line[7:].strip()
+                is_header = False  # Codes file only contains billable codes
 
             if not raw_code or len(raw_code) != 7:
                 continue
