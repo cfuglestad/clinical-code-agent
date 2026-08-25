@@ -13,8 +13,8 @@ import argparse
 import sys
 from pathlib import Path
 
-# Add project root to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent))
+# Add src/ to path for imports (when not pip-installed)
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from clinical_code_agent.ingestion.parsers import (
     CodeRecord,
