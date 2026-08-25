@@ -1,0 +1,59 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "clinical-code-agent"
+version = "0.1.0"
+description = "Tool-calling agent that makes clinical codes human-accessible"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [{name = "Connor Fuglestad"}]
+readme = "README.md"
+
+dependencies = [
+    "langgraph>=0.1.0",
+    "langchain>=0.2.0",
+    "langchain-openai>=0.1.0",
+    "chromadb>=0.5.0",
+    "sentence-transformers>=3.0.0",
+    "duckdb>=1.0.0",
+    "pydantic>=2.0",
+    "pydantic-settings>=2.0",
+    "mlflow>=2.12.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "ruff>=0.4.0",
+    "mypy>=1.10.0",
+]
+app = [
+    "streamlit>=1.32.0",
+    "plotly>=5.18.0",
+]
+
+[project.scripts]
+clinical-code-agent = "clinical_code_agent.main:cli"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-p no:cacheprovider"
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
